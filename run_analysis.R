@@ -1,50 +1,81 @@
-library(reshape2)
+## Set Working Directory ##
 
-filename <- "getdata_dataset.zip"
+setwd("D:/Suriani/My Desk 2016/02 Commercial Analytics (CA)/Cousera/Getting and Clensing Data/Assignment/getdata_projectfiles_UCI HAR Dataset/UCI HAR Dataset")
 
-## Download and unzip the dataset:
-if (!file.exists(filename)){
-  fileURL <- "https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip "
-  download.file(fileURL, filename, method="curl")
-}  
-if (!file.exists("UCI HAR Dataset")) { 
-  unzip(filename) 
-}
+## Test dataset
 
-# Load activity labels + features
-activityLabels <- read.table("UCI HAR Dataset/activity_labels.txt")
-activityLabels[,2] <- as.character(activityLabels[,2])
-features <- read.table("UCI HAR Dataset/features.txt")
-features[,2] <- as.character(features[,2])
+Xtest <- read.table("X_test.txt")
+Ytest <- read.table("y_test.txt")
+Subjectest <- read.table("subject_test.txt")
 
-# Extract only the data on mean and standard deviation
-featuresWanted <- grep(".*mean.*|.*std.*", features[,2])
-featuresWanted.names <- features[featuresWanted,2]
-featuresWanted.names = gsub('-mean', 'Mean', featuresWanted.names)
-featuresWanted.names = gsub('-std', 'Std', featuresWanted.names)
-featuresWanted.names <- gsub('[-()]', '', featuresWanted.names)
+## Train dataset
+
+Xtrain <- read.table("X_train.txt")
+Ytrain <- read.table("y_train.txt")
+Subjectrain <- read.table("subject_train.txt")
+
+## Features data
+
+features <- read.table("features.txt")
 
 
-# Load the datasets
-train <- read.table("UCI HAR Dataset/train/X_train.txt")[featuresWanted]
-trainActivities <- read.table("UCI HAR Dataset/train/Y_train.txt")
-trainSubjects <- read.table("UCI HAR Dataset/train/subject_train.txt")
-train <- cbind(trainSubjects, trainActivities, train)
+## 1.Merges the training and the test sets to create one data set.
 
-test <- read.table("UCI HAR Dataset/test/X_test.txt")[featuresWanted]
-testActivities <- read.table("UCI HAR Dataset/test/Y_test.txt")
-testSubjects <- read.table("UCI HAR Dataset/test/subject_test.txt")
-test <- cbind(testSubjects, testActivities, test)
+X <- rbind(Xtrain, Xtest)
+Y <- rbind(Ytrain, Ytest)
+Subject <- rbind(Subjectrain, Subjectest)
 
-# merge datasets and add labels
-allData <- rbind(train, test)
-colnames(allData) <- c("subject", "activity", featuresWanted.names)
 
-# turn activities & subjects into factors
-allData$activity <- factor(allData$activity, levels = activityLabels[,1], labels = activityLabels[,2])
-allData$subject <- as.factor(allData$subject)
+## 2.Extracts only the measurements on the mean and standard deviation for each measurement.
 
-allData.melted <- melt(allData, id = c("subject", "activity"))
-allData.mean <- dcast(allData.melted, subject + activity ~ variable, mean)
+index<-grep("mean\\(\\)|std\\(\\)", features[,2])
+length(index)
 
-write.table(allData.mean, "tidy.txt", row.names = FALSE, quote = FALSE)
+X<-X[,index]
+dim(X)
+
+## 3.Uses descriptive activity names to name the activities in the data set
+
+activity <- read.table("activity_labels.txt")
+
+Y[,1]<-activity[Y[,1],2]
+head(Y) 
+
+## 4.Appropriately labels the data set with descriptive variable names.
+
+names<-features[index,2]
+names(X)<-names
+names(Y)<-"Activity"
+names(Subject)<-"SubjectID"
+
+AllData<-cbind(Subject, Y, X)
+head(AllData)
+
+## 5.From the data set in step 4, creates a second, independent tidy data set with the average of each variable for each activity and each subject.
+
+#Option : 1
+FinalData <- aggregate(AllData, by = list(activity = AllData$activity, subject = AllData$subject),FUN = mean)
+
+#Option : 2
+FinalData <- AllData[, lapply(.SD, mean), by = 'SubjectID,Activity']
+
+#Option : 3
+library(magrittr)
+library(dplyr)
+FinalData <- AllData %>%
+group_by(SubjectID, Activity) %>%
+summarise_all(funs(mean))
+
+#Please upload the tidy data set created in step 5 of the instructions.
+#Please upload your data set as a txt file created with write.table() using row.name=FALSE (do not cut and paste a dataset directly into the text box, as this may cause errors saving your submission).
+
+write.table(FinalData, file = "FinalResult.txt", row.names = FALSE)
+
+dim(FinalData)
+head(FinalData)
+str(FinalData)
+
+
+
+
+
