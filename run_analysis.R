@@ -53,13 +53,6 @@ head(AllData)
 
 ## 5.From the data set in step 4, creates a second, independent tidy data set with the average of each variable for each activity and each subject.
 
-#Option : 1
-FinalData <- aggregate(AllData, by = list(activity = AllData$activity, subject = AllData$subject),FUN = mean)
-
-#Option : 2
-FinalData <- AllData[, lapply(.SD, mean), by = 'SubjectID,Activity']
-
-#Option : 3
 library(magrittr)
 library(dplyr)
 FinalData <- AllData %>%
